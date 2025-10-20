@@ -1,4 +1,5 @@
 import express from "express";
+HEAD
 import fetch from "node-fetch";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -29,10 +30,44 @@ app.post("/recommend", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}`
+
+import cors from "cors";
+import dotenv from "dotenv";
+import fetch from "node-fetch";
+
+dotenv.config();
+const app = express();
+
+// Enable CORS for all origins (replace "*" with your GitHub Pages URL in production)
+app.use(cors({
+  origin: "*"  
+}));
+
+app.use(express.json());
+
+app.post("/recommend", async (req, res) => {
+  try {
+    const userData = req.body;
+
+    // Use Hugging Face or fallback recommendation
+    const prompt = `Give 1 short racing improvement tip for this performance data: ${JSON.stringify(userData)}`;
+
+    // Example: fallback response
+    const fallback = "Use braking points wisely to maintain momentum.";
+
+    // If you have API key and model, uncomment below and replace
+    /*
+    const response = await fetch("https://api-inference.huggingface.co/models/gpt2", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+        "Content-Type": "application/json"
+>>>>>>> 1947802 (Update server.mjs)
       },
       body: JSON.stringify({ inputs: prompt })
     });
 
+<<<<<<< HEAD
     let data;
     try {
       data = await response.json();
@@ -55,5 +90,24 @@ app.post("/recommend", async (req, res) => {
   }
 });
 
+=======
+    const data = await response.json();
+
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      return res.json({ recommendation: data[0].generated_text.trim() });
+    }
+    */
+
+    // Fallback if API fails or no key
+    res.json({ recommendation: fallback, source: "fallback" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to get recommendation" });
+  }
+});
+
+// Render assigns port via env
+1947802 (Update server.mjs)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
