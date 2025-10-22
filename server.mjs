@@ -4,15 +4,18 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 dotenv.config();
+
 const app = express();
 
-// Enable CORS for all origins (replace "*" with your GitHub Pages URL in production)
+// Enable CORS for all origins (you can replace "*" with your GitHub Pages URL for more security)
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-const HF_MODEL = "distilgpt2"; // Free Hugging Face model
+// ✅ Hugging Face new endpoint (effective from Nov 2025)
+const HF_BASE_URL = "https://router.huggingface.co/hf-inference";
+const HF_MODEL = "distilgpt2"; // lightweight free model
 
-// Safe fallback tips
+// 🛟 Fallback racing tips
 const FALLBACK_TIPS = [
   "Focus on consistent lap times rather than maximum speed.",
   "Practice cornering technique to improve overall lap efficiency.",
@@ -26,36 +29,39 @@ app.post("/recommend", async (req, res) => {
     const userData = req.body;
     const prompt = `Give 1 short racing improvement tip for this performance data: ${JSON.stringify(userData)}`;
 
-    let recommendation = FALLBACK_TIPS[Math.floor(Math.random() * FALLBACK_TIPS.length)];
+    // Call new Hugging Face Inference Providers API
+    const response = await fetch(`${HF_BASE_URL}/models/${HF_MODEL}`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ inputs: prompt })
+    });
 
-    // Try Hugging Face API if key is provided
-    if (process.env.HUGGINGFACE_API_KEY) {
-      try {
-        const response = await fetch(`https://api-inference.huggingface.co/models/${HF_MODEL}`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ inputs: prompt })
-        });
-
-        const data = await response.json();
-        if (Array.isArray(data) && data[0]?.generated_text) {
-          recommendation = data[0].generated_text.trim();
-        }
-      } catch (hfErr) {
-        console.error("HuggingFace failed, using fallback:", hfErr);
-      }
+    // Try parsing the response
+    let data;
+    try {
+      data = await response.json();
+    } catch (err) {
+      console.error("⚠️ Failed to parse JSON from Hugging Face:", err);
     }
 
-    res.json({ recommendation, source: "fallback" });
+    // If Hugging Face fails or returns no text, use fallback
+    if (!data || !Array.isArray(data) || !data[0]?.generated_text) {
+      const fallback = FALLBACK_TIPS[Math.floor(Math.random() * FALLBACK_TIPS.length)];
+      return res.json({ recommendation: fallback, source: "fallback" });
+    }
+
+    res.json({ recommendation: data[0].generated_text.trim(), source: "huggingface" });
+
   } catch (err) {
-    console.error(err);
-    res.status(200).json({ recommendation: FALLBACK_TIPS[Math.floor(Math.random() * FALLBACK_TIPS.length)], source: "fallback" });
+    console.error("❌ Error in /recommend:", err);
+    const fallback = FALLBACK_TIPS[Math.floor(Math.random() * FALLBACK_TIPS.length)];
+    res.status(200).json({ recommendation: fallback, source: "fallback" });
   }
 });
 
-// Port from Render or default 3000
+// ✅ Render assigns PORT dynamically
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
