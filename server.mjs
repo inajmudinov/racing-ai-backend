@@ -12,7 +12,7 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 // ✅ Hugging Face new endpoint (effective from Nov 2025)
-const HF_BASE_URL = "https://router.huggingface.co/hf-inference";
+const HF_BASE_URL = "https://router.huggingface.co/hf-inference/";
 const HF_MODEL = "distilgpt2"; // lightweight free model
 
 // 🛟 Fallback racing tips
